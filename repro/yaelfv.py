@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -16,7 +16,7 @@ parser.add_argument('--vocab', action = 'append', nargs = 2, required = True)
 parser.add_argument('--enablesecondorder', action = 'store_true')
 parser.add_argument('--enablespatiotemporalgrids', action = 'store_true')
 
-args, unknown = parser.parse_args()
+args = parser.parse_args()
 
 flags = yael.GMM_FLAGS_MU
 if args.enablesecondorder:
@@ -25,11 +25,13 @@ if args.enablesecondorder:
 parts = []
 for p in args.vocab:
 	cutFrom, cutTo = map(int, p[0].split('-'))
-	gmm = yael.gmm_read(open(p[1], 'r'))
+	print('%s, %s, %s' % (cutFrom, cutTo, p[1]), file=sys.stderr)
+	gmm = yael.gmm_read(p[1])
 	fvSize = yael.gmm_fisher_sizeof(gmm, flags)
 	parts.append((cutFrom, cutTo, fvSize, gmm, os.path.basename(p[1])))
 	
-	print >> sys.stderr, '%d-%d: {d: %d, k: %d, fvSize: %d}' % (cutFrom, cutTo, gmm.d, gmm.k, fvSize);
+	print('%d-%d: {d: %d, k: %d, fvSize: %d}' % (cutFrom, cutTo, gmm.d, gmm.k, fvSize),
+              file=sys.stderr)
 
 nx, ny, nt = (1, 3, 2) if args.enablespatiotemporalgrids else (1, 1, 1)
 nxyt = nx * ny * nt
@@ -58,25 +60,25 @@ timerCopying, timerAssigning = 0.0, 0.0
 for line in sys.stdin:
 	descr = np.fromstring(line, sep = '\t', dtype = np.float32)
 	
-	x = min(nx - 1, int(nx * descr[args.xnpos]))
-	y = min(ny - 1, int(ny * descr[args.ynpos]))
-	t = min(nt - 1, int(nt * descr[args.tnpos]))
+	x = min(nx - 1, int(nx * descr[args.xpos]))
+	y = min(ny - 1, int(ny * descr[args.ypos]))
+	t = min(nt - 1, int(nt * descr[args.tpos]))
 
-	tic = time.clock()
+	tic = time.perf_counter()
 	buffer[x, y, t, cnt[x, y, t], :descr.size] = descr
 	cnt[x, y, t] += 1
-	timerCopying += time.clock() - tic
+	timerCopying += time.perf_counter() - tic
 	
 	if cnt[x, y , t] == buffer[x, y, t].shape[0]:
-		tic = time.clock()
+		tic = time.perf_counter()
 		acc[x, y, t] += flushBuffer(x, y, t)
-		timerAssigning += time.clock() - tic
+		timerAssigning += time.perf_counter() - tic
 
 for x, y, t in mesh:
 	if cnt[x, y, t] > 0:
-		tic = time.clock()
+		tic = time.perf_counter()
 		acc[x, y, t] += flushBuffer(x, y, t)
-		timerAssigning += time.clock() - tic
+		timerAssigning += time.perf_counter() - tic
 
 if args.enablespatiotemporalgrids:
 	res = np.empty((nx + ny + nt, acc.shape[-1]), dtype = np.float32)
@@ -92,22 +94,23 @@ else:
 for cutFrom, cutTo, fvSize, gmm, partName in parts:
 	begin, end = end, end + fvSize
 
-	print '#FV %dx1x1x %s (%d-%d), 0-0-0' % (nx, partName, cutFrom, cutTo)
+	print('#FV %dx1x1x %s (%d-%d), 0-0-0' % (nx, partName, cutFrom, cutTo))
 	np.savetxt(sys.stdout, res[0][begin:end], fmt = '%.6f', newline = '\t')
-	print ''
+	print('')
 	
 	if args.enablespatiotemporalgrids:
 		for j in range(ny):
-			print '#FV 1x%dx1x %s (%d-%d), 0-%d-0' % (ny, partName, cutFrom, cutTo, j)
+			print('#FV 1x%dx1x %s (%d-%d), 0-%d-0' % (ny, partName, cutFrom, cutTo, j))
 			np.savetxt(sys.stdout, res[1 + j][begin:end], fmt = '%.6f', newline = '\t')
-			print ''
+			print('')
 		
 		for j in range(nt):
-			print '#FV 1x1x%dx %s (%d-%d), 0-0-%d' % (nt, partName, cutFrom, cutTo, j)
+			print('#FV 1x1x%dx %s (%d-%d), 0-0-%d' % (nt, partName, cutFrom, cutTo, j))
 			np.savetxt(sys.stdout, res[4 + j][begin:end], fmt = '%.6f', newline = '\t')
-			print ''
+			print('')
 
-print >> sys.stderr, 'Enable spatio-temporal grids (1x1x1, 1x3x1, 1x1x2): %s' % args.enablespatiotemporalgrids
-print >> sys.stderr, 'Enable second order: %s' % args.enablesecondorder
-print >> sys.stderr, 'Copying (sec): %.4f' % timerCopying
-print >> sys.stderr, 'Assigning (sec): %.4f' % timerAssigning
+print('Enable spatio-temporal grids (1x1x1, 1x3x1, 1x1x2): %s' % args.enablespatiotemporalgrids,
+      file=sys.stderr)
+print('Enable second order: %s' % args.enablesecondorder, file=sys.stderr)
+print('Copying (sec): %.4f' % timerCopying, file=sys.stderr)
+print('Assigning (sec): %.4f' % timerAssigning, file=sys.stderr)

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import sys
 import argparse
@@ -21,4 +21,4 @@ redo = 1
 flags = yael.GMM_FLAGS_W
 gmm = yael.gmm_learn(nfeatures, npoints, args.gmm_ncomponents, niter, yael.FloatArray.acquirepointer(yael.numpy_to_fvec(data)), nthreads, seed, redo, flags)
 
-yael.gmm_write(gmm, open(args.vocab[1], 'w'))
+yael.gmm_write(gmm, args.vocab[1])
