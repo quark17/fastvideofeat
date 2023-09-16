@@ -91,6 +91,7 @@ if args.enablespatiotemporalgrids:
 else:
 	res = acc[0, 0, 0, np.newaxis]
 
+begin, end = 0, 0
 for cutFrom, cutTo, fvSize, gmm, partName in parts:
 	begin, end = end, end + fvSize
 
