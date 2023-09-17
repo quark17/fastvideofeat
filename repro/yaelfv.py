@@ -25,7 +25,6 @@ if args.enablesecondorder:
 parts = []
 for p in args.vocab:
 	cutFrom, cutTo = map(int, p[0].split('-'))
-	print('%s, %s, %s' % (cutFrom, cutTo, p[1]), file=sys.stderr)
 	gmm = yael.gmm_read(p[1])
 	fvSize = yael.gmm_fisher_sizeof(gmm, flags)
 	parts.append((cutFrom, cutTo, fvSize, gmm, os.path.basename(p[1])))
