@@ -1,16 +1,28 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import os
 import sys
-import itertools
+from functools import reduce
 import numpy as np
 import numpy.linalg as linalg
 
 IN = [os.path.join(sys.argv[1], x[:-1] + '.txt') for x in open(sys.argv[2])]
 
-skipComments = lambda path: itertools.ifilter(lambda x: not x.startswith('#'), open(path))
-ks = [None]*len(list(skipComments(IN[0])))
-streams = map(skipComments, IN)
+# The number of descriptor lines in the file
+n = len(list(filter(lambda x: not x.startswith('#'), open(IN[0]))))
+# Initial value for a vector of n elements
+ks = [None]*n
+
+def nextNonCommentLine(f):
+        res = '#'
+        while res.startswith('#'):
+                res = f.readline()
+        return res
+
+# Open each of the encoded feature files
+# Note: this may require increasing the number of allowed open file
+#       (see 'ulimit -a')
+fs = [open(path) for path in IN]
 
 def fv_norm(fv):
 	fv = np.clip(fv, -1000, 1000)
@@ -19,7 +31,7 @@ def fv_norm(fv):
 	return fv
 
 for i in range(len(ks)):
-	x = np.vstack(tuple([fv_norm(np.fromstring(s.next(), dtype = np.float32, sep = '\t')) for s in streams]))
+	x = np.vstack(tuple([fv_norm(np.fromstring(nextNonCommentLine(f), dtype = np.float32, sep = '\t')) for f in fs]))
 	ks[i] = np.dot(x, x.T)
 
 res = reduce(np.add, ks)
