@@ -10,18 +10,43 @@ from sklearn.svm import SVC
 EVAL_DIR, allClips = sys.argv[1], list(map(lambda l: l[:-1], open(sys.argv[2])))
 all_k = np.loadtxt(sys.stdin)
 
-classLabels = sorted(set([f.split('_test_split')[0] for f in os.listdir(EVAL_DIR) if '_test_split' in f]))
-def read_split(SPLIT_IND):
-	fixClipName = lambda x: reduce(lambda acc, ch: acc.replace(ch, '_'), '][;()&?!', x)
-	train, test = [], []
-	for classLabel in classLabels:
-		d = dict(list(map(str.split, open(os.path.join(EVAL_DIR, '%s_test_split%d.txt' % (classLabel, 1 + SPLIT_IND))))))
-		train += [(fixClipName(k), classLabel) for k, v in d.items() if v == '1']
-		test += [(fixClipName(k), classLabel) for k, v in d.items() if v == '2']
+# Support loading the test/train split according to the UCF-101 format
+format2 = (len(sys.argv) == 4) and (sys.argv[3] == '--format2')
 
-	return (train, test)
+# Based on the format, determine:
+#   classLables
+#   splits
+#
+if format2:
+	print('Reading format2...')
+	classLabels = list(map(lambda l: l.split()[-1], open(os.path.join(EVAL_DIR, 'classInd.txt'))))
+	def read_split(SPLIT_IND):
+		idx = 1 + SPLIT_IND
+		train = []
+		for l in open(os.path.join(EVAL_DIR, 'trainlist%02d.txt' % idx)):
+			cols = (l.split()[0]).split('/')
+			train += [(cols[1], cols[0])]
+		test = []
+		for l in open(os.path.join(EVAL_DIR, 'testlist%02d.txt' % idx)):
+			cols = (l.split()[0]).split('/')
+			test += [(cols[1], cols[0])]
+		print('Split %d: trainlen %d, testlen %d' % (idx, len(train), len(test)))
+		return (train, test)
+	splits = list(map(read_split, list(range(3))))
+	print()
+else:
+	print('Reading format1...')
+	classLabels = sorted(set([f.split('_test_split')[0] for f in os.listdir(EVAL_DIR) if '_test_split' in f]))
+	def read_split(SPLIT_IND):
+		fixClipName = lambda x: reduce(lambda acc, ch: acc.replace(ch, '_'), '][;()&?!', x)
+		train, test = [], []
+		for classLabel in classLabels:
+			d = dict(list(map(str.split, open(os.path.join(EVAL_DIR, '%s_test_split%d.txt' % (classLabel, 1 + SPLIT_IND))))))
+			train += [(fixClipName(k), classLabel) for k, v in d.items() if v == '1']
+			test += [(fixClipName(k), classLabel) for k, v in d.items() if v == '2']
+		return (train, test)
+	splits = list(map(read_split, list(range(3))))
 
-splits = list(map(read_split, list(range(3))))
 slice_kernel = lambda inds1, inds2: all_k[np.ix_(list(map(allClips.index, inds1)), list(map(allClips.index, inds2)))]
 REG_C = 1.0
 
