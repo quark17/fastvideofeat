@@ -7,17 +7,46 @@ from functools import reduce
 import numpy as np
 from sklearn.svm import SVC
 
-EVAL_DIR, allClips = sys.argv[1], list(map(lambda l: l[:-1], open(sys.argv[2])))
+if (len(sys.argv) < 3) or (len(sys.argv) > 4):
+	print('usage: %s <split_dir> <allclips_file> [--format#]' % sys.argv[0])
+	raise SystemExit(1)
+
+EVAL_DIR = sys.argv[1]
+allClips = list(map(lambda l: l[:-1], open(sys.argv[2])))
 all_k = np.loadtxt(sys.stdin)
 
-# Support loading the test/train split according to the UCF-101 format
-format2 = (len(sys.argv) == 4) and (sys.argv[3] == '--format2')
+if (len(sys.argv) == 4) and (sys.argv[3] == '--format3'):
+        # Modified UCF-101 format to be more universal (used for CalTech-256)
+        format = 3
+elif (len(sys.argv) == 4) and (sys.argv[3] == '--format2'):
+        # Support UCF-101 formats
+        format = 2
+else:
+        # Default is HMDB-51 formats
+        format = 1
 
 # Based on the format, determine:
 #   classLables
 #   splits
 #
-if format2:
+if (format == 3):
+	print('Reading format...')
+	classLabels = list(map(lambda l: l.replace('\n',''), open(os.path.join(EVAL_DIR, 'classLabels.txt'))))
+	def read_split(SPLIT_IND):
+		idx = 1 + SPLIT_IND
+		train = []
+		for l in open(os.path.join(EVAL_DIR, 'trainlist%02d.txt' % idx)):
+			cols = l.split()
+			train += [(cols[0], cols[1])]
+		test = []
+		for l in open(os.path.join(EVAL_DIR, 'testlist%02d.txt' % idx)):
+			cols = l.split()
+			test += [(cols[0], cols[1])]
+		print('Split %d: trainlen %d, testlen %d' % (idx, len(train), len(test)))
+		return (train, test)
+	splits = list(map(read_split, list(range(3))))
+	print()
+elif (format == 2):
 	print('Reading format2...')
 	classLabels = list(map(lambda l: l.split()[-1], open(os.path.join(EVAL_DIR, 'classInd.txt'))))
 	def read_split(SPLIT_IND):
@@ -34,7 +63,7 @@ if format2:
 		return (train, test)
 	splits = list(map(read_split, list(range(3))))
 	print()
-else:
+elif (format == 1):
 	print('Reading format1...')
 	classLabels = sorted(set([f.split('_test_split')[0] for f in os.listdir(EVAL_DIR) if '_test_split' in f]))
 	def read_split(SPLIT_IND):
@@ -46,6 +75,9 @@ else:
 			test += [(fixClipName(k), classLabel) for k, v in d.items() if v == '2']
 		return (train, test)
 	splits = list(map(read_split, list(range(3))))
+else:
+        print('Unrecognized format')
+        raise SystemExit(1)
 
 slice_kernel = lambda inds1, inds2: all_k[np.ix_(list(map(allClips.index, inds1)), list(map(allClips.index, inds2)))]
 REG_C = 1.0
