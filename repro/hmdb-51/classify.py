@@ -2,15 +2,18 @@
 
 import os
 import sys
+from datetime import datetime
 import itertools
 from functools import reduce
 import numpy as np
+import pandas as pd
 from sklearn.svm import SVC
 
 if (len(sys.argv) < 3) or (len(sys.argv) > 4):
 	print('usage: %s <split_dir> <allclips_file> [--format#]' % sys.argv[0])
 	raise SystemExit(1)
 
+RES_DIR = 'results'
 EVAL_DIR = sys.argv[1]
 allClips = list(map(lambda l: l[:-1], open(sys.argv[2])))
 all_k = np.loadtxt(sys.stdin)
@@ -30,7 +33,7 @@ else:
 #   splits
 #
 if (format == 3):
-	print('Reading format...')
+	print('Reading format3...')
 	classLabels = list(map(lambda l: l.replace('\n',''), open(os.path.join(EVAL_DIR, 'classLabels.txt'))))
 	def read_split(SPLIT_IND):
 		idx = 1 + SPLIT_IND
@@ -91,6 +94,8 @@ def svm_train_test(train_k, test_k, ytrain, REG_C):
 	return train_conf, test_conf
 
 def one_vs_rest(SPLIT_IND):
+	global combined_res_df
+
 	calc_accuracy = lambda chosen, true: sum([int(true[i] == chosen[i]) for i in range(len(chosen))]) / float(len(chosen))
 	partition = lambda f, ls: (list(filter(f, ls)), list(itertools.filterfalse(f, ls)))
 	train, test = splits[SPLIT_IND]
@@ -104,16 +109,27 @@ def one_vs_rest(SPLIT_IND):
 		train_k, test_k = list(map(lambda x: slice_kernel(x, xtrain), [xtrain, xtest]))
 		train_conf, test_conf = svm_train_test(train_k, test_k, ytrain, REG_C)
 		confs.append(test_conf)
-	
+
 	ntest = len(test)
 	chosen = [max([(confs[k][i], k) for k in range(len(classLabels))])[1] for i in range(ntest)]
 	true = [classLabels.index(test[i][1]) for i in range(ntest)]
+
+	res_df = pd.DataFrame(pd.Series.eq(pd.Series(chosen),pd.Series(test))).transpose()
+	res_df.columns = pd.DataFrame(test)[0]
+	combined_res_df = pd.concat([combined_res_df,res_df], ignore_index=True, sort=False)
+
 	return calc_accuracy(chosen, true)
 
 aps = []
+combined_res_df = pd.DataFrame()
 for SPLIT_IND in range(len(splits)):
 	test_ap = one_vs_rest(SPLIT_IND)
 	aps.append(test_ap)
 	print('%-15s: %.4f' % ('split_%d' % SPLIT_IND, test_ap))
 
 print('\nmean: %.4f' % np.mean(aps))
+
+if not os.path.exists(RES_DIR):
+        os.mkdir(RES_DIR)
+res_fname = os.path.join(RES_DIR, 'results-' + str(datetime.now().timestamp()) + '.csv')
+combined_res_df.to_csv(res_fname)
