@@ -42,9 +42,6 @@ cnt = np.zeros((nx, ny, nt), dtype = int)
 ndescr = np.zeros_like(cnt)  # XXX unused?
 
 def flushBuffer(x, y, t):
-	global ndescr
-	global cnt
-
 	c = int(cnt[x, y, t])
 	fvs = []
 	for cutFrom, cutTo, fvSize, gmm, partName in parts:
