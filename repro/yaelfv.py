@@ -39,9 +39,12 @@ mesh = list(itertools.product(range(nx), range(ny), range(nt)))
 buffer = np.zeros((nx, ny, nt, 10000, 500), dtype = np.float32)
 acc = np.zeros((nx, ny, nt, sum([fvSize for cutFrom, cutTo, fvSize, gmm, partName in parts])), dtype = np.float32)
 cnt = np.zeros((nx, ny, nt), dtype = int)
-ndescr = np.zeros_like(cnt)
+ndescr = np.zeros_like(cnt)  # XXX unused?
 
 def flushBuffer(x, y, t):
+	global ndescr
+	global cnt
+
 	c = int(cnt[x, y, t])
 	fvs = []
 	for cutFrom, cutTo, fvSize, gmm, partName in parts:
