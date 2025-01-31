@@ -114,7 +114,7 @@ def one_vs_rest(SPLIT_IND):
 	chosen = [max([(confs[k][i], k) for k in range(len(classLabels))])[1] for i in range(ntest)]
 	true = [classLabels.index(test[i][1]) for i in range(ntest)]
 
-	res_df = pd.DataFrame(pd.Series.eq(pd.Series(chosen),pd.Series(test))).transpose()
+	res_df = pd.DataFrame(pd.Series.eq(pd.Series(chosen),pd.Series(true))).transpose()
 	res_df.columns = pd.DataFrame(test)[0]
 	combined_res_df = pd.concat([combined_res_df,res_df], ignore_index=True, sort=False)
 
