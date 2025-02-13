@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 import itertools
 from functools import reduce
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
@@ -50,7 +51,7 @@ else:
 #   splits
 #
 if (format == 3) or (format == 4):
-	print('Reading format3...')
+	print('Reading format%d...' % format)
 	classLabels = list(map(lambda l: l.replace('\n',''), open(os.path.join(EVAL_DIR, 'classLabels.txt'))))
 	def read_split(delim, tag):
 		train = []
@@ -114,10 +115,25 @@ def svm_train_test(train_k, test_k, ytrain, REG_C):
 	train_conf, test_conf = list(map(flatten, map(model.decision_function, [train_k, test_k])))
 	return train_conf, test_conf
 
+def calc_accuracy(chosen, true):
+	# This is not normalised by the size of the classes
+	#sum([int(true[i] == chosen[i]) for i in range(len(chosen))]) / float(len(chosen))
+
+	d = defaultdict(list)
+	for chosen_label, true_label in zip(chosen, true):
+		d[true_label].append(chosen_label)
+
+	class_accuracies = []
+	for true_label, chosens in list(d.items()):
+		accuracy = chosens.count(true_label) / float(len(chosens))
+		print('%s: %.4f' % (classLabels[true_label], accuracy))
+		class_accuracies.append(accuracy)
+
+	return sum(class_accuracies) / len(class_accuracies)
+
 def one_vs_rest(SPLIT_IND):
 	global combined_res_df
 
-	calc_accuracy = lambda chosen, true: sum([int(true[i] == chosen[i]) for i in range(len(chosen))]) / float(len(chosen))
 	partition = lambda f, ls: (list(filter(f, ls)), list(itertools.filterfalse(f, ls)))
 	train, test = splits[SPLIT_IND]
 	xtest, ytest = list(zip(*test))
