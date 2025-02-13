@@ -9,45 +9,66 @@ import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
 
-if (len(sys.argv) < 3) or (len(sys.argv) > 4):
-	print('usage: %s <split_dir> <allclips_file> [--format#]' % sys.argv[0])
+def usage():
+	print('usage:')
+	print('  %s <split_dir> <allclips_file> --format4 seed' % sys.argv[0])
+	print('  %s <split_dir> <allclips_file> --format3' % sys.argv[0])
+	print('  %s <split_dir> <allclips_file> --format2' % sys.argv[0])
+	print('  %s <split_dir> <allclips_file> [--format1]' % sys.argv[0])
 	raise SystemExit(1)
 
+if (len(sys.argv) < 3) or (len(sys.argv) > 5):
+	usage();
+
 RES_DIR = 'results'
+# Tag to be included in the result file name
+res_tag = ''
 EVAL_DIR = sys.argv[1]
 allClips = list(map(lambda l: l[:-1], open(sys.argv[2])))
 all_k = np.loadtxt(sys.stdin)
 
-if (len(sys.argv) == 4) and (sys.argv[3] == '--format3'):
-        # Modified UCF-101 format to be more universal (used for CalTech-256)
-        format = 3
+if (len(sys.argv) == 5) and (sys.argv[3] == '--format4'):
+	# Same as format3 but only one random split
+	format = 4
+	# And files named according to the seed
+	randseed = int(sys.argv[4])
+	res_tag = ('seed%d' % randseed)
+elif (len(sys.argv) == 4) and (sys.argv[3] == '--format3'):
+	# Modified UCF-101 format to be more universal (used for CalTech-*)
+	format = 3
 elif (len(sys.argv) == 4) and (sys.argv[3] == '--format2'):
-        # Support UCF-101 formats
-        format = 2
+	# UCF-101 format
+	format = 2
+elif (len(sys.argv) == 3) or ((len(sys.argv) == 4) and (sys.arg[3] == '--format1')):
+	# HMDB-51 format
+	format = 1
 else:
-        # Default is HMDB-51 formats
-        format = 1
+	usage();
 
 # Based on the format, determine:
 #   classLables
 #   splits
 #
-if (format == 3):
+if (format == 3) or (format == 4):
 	print('Reading format3...')
 	classLabels = list(map(lambda l: l.replace('\n',''), open(os.path.join(EVAL_DIR, 'classLabels.txt'))))
-	def read_split(SPLIT_IND):
-		idx = 1 + SPLIT_IND
+	def read_split(delim, tag):
 		train = []
-		for l in open(os.path.join(EVAL_DIR, 'trainlist%02d.txt' % idx)):
+		for l in open(os.path.join(EVAL_DIR, 'trainlist%s%s.txt' % (delim, tag))):
 			cols = l.split()
 			train += [(cols[0], cols[1])]
 		test = []
-		for l in open(os.path.join(EVAL_DIR, 'testlist%02d.txt' % idx)):
+		for l in open(os.path.join(EVAL_DIR, 'testlist%s%s.txt' % (delim, tag))):
 			cols = l.split()
 			test += [(cols[0], cols[1])]
-		print('Split %d: trainlen %d, testlen %d' % (idx, len(train), len(test)))
+		print('Split %s: trainlen %d, testlen %d' % (tag, len(train), len(test)))
 		return (train, test)
-	splits = list(map(read_split, list(range(3))))
+	if (format == 3):
+		def read_format3_split(SPLIT_IND):
+			read_split('', '%02d' % (SPLIT_IND + 1))
+		splits = list(map(read_format3_split, list(range(3))))
+	else:
+		splits = [read_split('-', '%d' % randseed)]
 	print()
 elif (format == 2):
 	print('Reading format2...')
@@ -79,8 +100,8 @@ elif (format == 1):
 		return (train, test)
 	splits = list(map(read_split, list(range(3))))
 else:
-        print('Unrecognized format')
-        raise SystemExit(1)
+	print('Unrecognized format')
+	raise SystemExit(1)
 
 slice_kernel = lambda inds1, inds2: all_k[np.ix_(list(map(allClips.index, inds1)), list(map(allClips.index, inds2)))]
 REG_C = 1.0
@@ -130,6 +151,7 @@ for SPLIT_IND in range(len(splits)):
 print('\nmean: %.4f' % np.mean(aps))
 
 if not os.path.exists(RES_DIR):
-        os.mkdir(RES_DIR)
-res_fname = os.path.join(RES_DIR, 'results-' + str(datetime.now().timestamp()) + '.csv')
+	os.mkdir(RES_DIR)
+res_suffix = ((res_tag + '-') if (res_tag != '') else '') + 'time' + str(datetime.now().timestamp())
+res_fname = os.path.join(RES_DIR, 'results-%s.csv' % res_suffix)
 combined_res_df.to_csv(res_fname)
