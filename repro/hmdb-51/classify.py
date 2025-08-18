@@ -9,6 +9,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
+from sklearn.metrics import average_precision_score
 
 def usage():
 	print('usage:')
@@ -119,6 +120,7 @@ def calc_accuracy(chosen, true):
 	# This is not normalised by the size of the classes
 	#sum([int(true[i] == chosen[i]) for i in range(len(chosen))]) / float(len(chosen))
 
+	# XXX This is not computing proper balanced accuracy
 	d = defaultdict(list)
 	for chosen_label, true_label in zip(chosen, true):
 		d[true_label].append(chosen_label)
@@ -130,6 +132,14 @@ def calc_accuracy(chosen, true):
 		class_accuracies.append(accuracy)
 
 	return sum(class_accuracies) / len(class_accuracies)
+
+def calc_mAP(ytest, confs):
+	def mk_test_i(i):
+		return [classLabels.index(label) == i for label in ytest]
+
+	ytest_is = [mk_test_i(i) for i in range(len(confs))]
+	micro_AP = average_precision_score(ytest_is, confs, average='micro')
+	return micro_AP
 
 def one_vs_rest(SPLIT_IND):
 	global combined_res_df
@@ -155,7 +165,8 @@ def one_vs_rest(SPLIT_IND):
 	res_df.columns = pd.DataFrame(test)[0]
 	combined_res_df = pd.concat([combined_res_df,res_df], ignore_index=True, sort=False)
 
-	return calc_accuracy(chosen, true)
+	#return calc_accuracy(chosen, true)
+	return calc_mAP(ytest, confs);
 
 aps = []
 combined_res_df = pd.DataFrame()
