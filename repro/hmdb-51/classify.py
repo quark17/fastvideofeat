@@ -116,11 +116,15 @@ def svm_train_test(train_k, test_k, ytrain, REG_C):
 	train_conf, test_conf = list(map(flatten, map(model.decision_function, [train_k, test_k])))
 	return train_conf, test_conf
 
+# Do not use this for unbalanced data;
+# it does not normalise by the size of the classes
 def calc_accuracy(chosen, true):
-	# This is not normalised by the size of the classes
-	#sum([int(true[i] == chosen[i]) for i in range(len(chosen))]) / float(len(chosen))
+	count = sum([int(true[i] == chosen[i]) for i in range(len(chosen))])
+	total = len(chosen)
+	return (count / float(total))
 
-	# XXX This is not computing proper balanced accuracy
+# XXX This is not computing proper balanced accuracy
+def calc_accuracy_norm(chosen, true):
 	d = defaultdict(list)
 	for chosen_label, true_label in zip(chosen, true):
 		d[true_label].append(chosen_label)
@@ -165,8 +169,9 @@ def one_vs_rest(SPLIT_IND):
 	res_df.columns = pd.DataFrame(test)[0]
 	combined_res_df = pd.concat([combined_res_df,res_df], ignore_index=True, sort=False)
 
-	#return calc_accuracy(chosen, true)
-	return calc_mAP(ytest, confs);
+	return calc_accuracy(chosen, true)
+	#return calc_accuracy_norm(chosen, true)
+	#return calc_mAP(ytest, confs);
 
 aps = []
 combined_res_df = pd.DataFrame()
