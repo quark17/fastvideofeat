@@ -18,7 +18,7 @@ data = np.loadtxt(sys.stdin, dtype = np.float32, usecols = range(cutFrom, 1 + cu
 npoints, nfeatures = data.shape
 niter = 50
 nthreads = args.nthreads
-seed = 0
+seed = args.seed
 redo = 1
 flags = yael.GMM_FLAGS_W
 
