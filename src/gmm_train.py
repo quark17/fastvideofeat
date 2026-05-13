@@ -8,7 +8,8 @@ import yael
 parser = argparse.ArgumentParser()
 parser.add_argument('--gmm_ncomponents', type = int, required = True)
 parser.add_argument('--vocab', nargs = 2, required = True)
-parser.add_argument('--nthreads', type = int, required = False)
+parser.add_argument('--seed', type = int, required = False, default = 0)
+parser.add_argument('--nthreads', type = int, required = False, default = 1)
 args = parser.parse_args()
 cutFrom, cutTo = map(int, args.vocab[0].split('-'))
 
