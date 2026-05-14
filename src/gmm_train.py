@@ -23,7 +23,7 @@ seed = args.seed
 redo = args.redo
 flags = yael.GMM_FLAGS_W
 
-if ((nthreads < 1) or (nthreads > 16)):
+if ((nthreads < 1) or (nthreads > 24)):
     print('Bad nthreads value: %d' % nthreads)
     raise SystemExit(1)
 
