@@ -123,7 +123,8 @@ def calc_accuracy(chosen, true):
 	total = len(chosen)
 	return (count / float(total))
 
-# XXX This is not computing proper balanced accuracy
+# Balanced accuracy: Macro-average of recall for all classes
+# where recall = TPs / (TPs + FNs).
 def calc_accuracy_norm(chosen, true):
 	d = defaultdict(list)
 	for chosen_label, true_label in zip(chosen, true):
@@ -169,8 +170,8 @@ def one_vs_rest(SPLIT_IND):
 	res_df.columns = pd.DataFrame(test)[0]
 	combined_res_df = pd.concat([combined_res_df,res_df], ignore_index=True, sort=False)
 
-	return calc_accuracy(chosen, true)
-	#return calc_accuracy_norm(chosen, true)
+	#return calc_accuracy(chosen, true)
+	return calc_accuracy_norm(chosen, true)
 	#return calc_mAP(ytest, confs);
 
 aps = []
