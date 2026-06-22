@@ -54,9 +54,9 @@ def flushBuffer(x, y, t):
 	cnt[x, y, t] = 0
 	stk = np.hstack(tuple(fvs))
 	# If the result has NaN, try to recover?
-	if np.isnan(stk).any():
+	if np.isnan(stk[0]):
 		print('batch has NaN', file=sys.stderr)
-	stk[np.isnan(stk)] = 0.0
+		stk[np.isnan(stk)] = 0.0
 	return np.sqrt(c) * stk
 
 timerCopying, timerAssigning = 0.0, 0.0
