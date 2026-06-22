@@ -24,14 +24,18 @@ def nextNonCommentLine(f):
 #       (see 'ulimit -a')
 fs = [open(path) for path in IN]
 
-def fv_norm(fv):
+def fv_norm(i, f):
+	fv = np.fromstring(nextNonCommentLine(f), dtype = np.float32, sep = '\t')
+	if np.isnan(fv[0]):
+		print('fv[%d] has NaN: %s' % (i,f), file=sys.stderr)
+		fv[np.isnan(fv)] = 0.0
 	fv = np.clip(fv, -1000, 1000)
 	fv = np.sign(fv) * np.sqrt(np.abs(fv))
 	fv /= (1e-4 + linalg.norm(fv))
 	return fv
 
 for i in range(len(ks)):
-	x = np.vstack(tuple([fv_norm(np.fromstring(nextNonCommentLine(f), dtype = np.float32, sep = '\t')) for f in fs]))
+	x = np.vstack(tuple([fv_norm(i, f) for f in fs]))
 	ks[i] = np.dot(x, x.T)
 
 res = reduce(np.add, ks)
